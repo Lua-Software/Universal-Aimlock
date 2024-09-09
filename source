@@ -1,0 +1,106 @@
+-- Universal Aimlock
+
+Players = game:GetService("Players")
+GuiService = game:GetService("GuiService")
+RunService = game:GetService("RunService")
+UserInputService = game:GetService("UserInputService")
+
+Enabled = true
+MouseDown = false
+Camera = workspace.CurrentCamera
+Cache = {}
+
+function CreateFOVCircle() 
+    local Circle = Drawing.new("Circle")
+
+    Circle.Visible = true
+    Circle.Thickness = 1
+    Circle.Filled = false
+    Circle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2  - (GuiService:GetGuiInset().Y/2))
+    Circle.Radius = 80
+    Circle.NumSides = 64
+    Circle.Color = Color3.fromRGB(144, 238, 144)
+
+    Cache["FOV_Circle"] = Circle
+end
+
+local function Get2DDistance(pos1, pos2)
+    return (pos1 - pos2).Magnitude
+end
+
+function ClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = 80
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= Players.LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+            local head = player.Character.Head
+            local headPosition, onScreen = Camera:WorldToViewportPoint(head.Position)
+
+            if onScreen then
+                local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2 - (GuiService:GetGuiInset().Y/2))
+                local distance = Get2DDistance(screenCenter, Vector2.new(headPosition.X, headPosition.Y))
+
+                if distance < shortestDistance then
+                    closestPlayer = player
+                    shortestDistance = distance
+                end
+            end
+        end
+    end
+
+    return closestPlayer
+end
+
+
+function Update()
+    if RightMouseDown and isrbxactive() then
+        local closestPlayer = ClosestPlayer()
+    
+        if closestPlayer then
+            local head = closestPlayer.Character.Head
+            local headPosition, isOnScreen = Camera:WorldToViewportPoint(head.Position)
+            
+            if isOnScreen then
+                local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                local targetPosition = Vector2.new(headPosition.X, headPosition.Y)
+                local offset = targetPosition - screenCenter
+    
+                local sensitivity = 0.3
+                mousemoverel(offset.X * sensitivity, offset.Y * sensitivity)
+            end
+        end
+    end
+end
+
+function Cancel() 
+    Cache["FOV_Circle"]:Remove()
+end
+
+CreateFOVCircle()
+
+RunService:BindToRenderStep("Aimlock", Enum.RenderPriority.Camera.Value, Update)
+
+UserInputService.InputBegan:Connect(function(key)
+    if key.UserInputType == Enum.UserInputType.MouseButton2 then
+        RightMouseDown = true
+    end
+
+    if key == Enum.KeyCode.E then
+        if Enabled then
+            RunService:UnbindFromRenderStep("Aimlock")
+            Cancel()
+        else
+            CreateFOVCircle()
+            RunService:BindToRenderStep("Aimlock", Enum.RenderPriority.Camera.Value, Update)
+        end
+
+        Enabled = not Enabled
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(key)
+    if key.UserInputType == Enum.UserInputType.MouseButton2 then
+        RightMouseDown = false
+    end
+end)
