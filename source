@@ -33,7 +33,15 @@ function ClosestPlayer()
     local shortestDistance = 80
 
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= Players.LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+        local team = false
+
+        if Players.LocalPlayer.Team == nil then
+            team = false
+        elseif Players.LocalPlayer.Team == Players.LocalPlayer.Team then
+            team = true
+        end
+
+        if player ~= Players.LocalPlayer and player.Character and player.Character:FindFirstChild("Head") and not team then
             local head = player.Character.Head
             local headPosition, onScreen = Camera:WorldToViewportPoint(head.Position)
 
